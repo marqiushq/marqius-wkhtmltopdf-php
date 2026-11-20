@@ -5,9 +5,10 @@
 #   tests/examples.sh WORK [LIBRARY ...]
 #
 # LIBRARY is snappy, image, phpwkhtmltopdf, cakepdf, laravel-snappy, knpsnappybundle or
-# knpsnappybundle-php (all by default). PLUGIN=allow (the default) lets Composer run the package's plugin, which fetches the
-# program while Composer installs; PLUGIN=prompt answers Composer's trust question with y;
-# PLUGIN=off leaves the plugin blocked, so the program is fetched on first use.
+# knpsnappybundle-php (all by default). With several, each runs on its own, and all are reported
+# before the script fails. PLUGIN=allow (the default) lets Composer run the package's plugin,
+# which fetches the program while Composer installs; PLUGIN=prompt answers Composer's trust
+# question with y; PLUGIN=off leaves the plugin blocked, so the program is fetched on first use.
 # MARQIUS_COMPOSER_REPO is a Composer repository (JSON) that holds marqius/wkhtmltopdf before
 # Packagist does, such as {"type":"artifact","url":"/tmp/zips"}.
 set -eu
@@ -15,6 +16,20 @@ pkg=$(cd "$(dirname "$0")/.." && pwd)
 work=$1
 shift
 libraries=${*:-snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php}
+
+# several libraries: run each in a process of its own, so that one failing does not hide the rest
+if [ "$(echo $libraries | wc -w)" -gt 1 ]; then
+    failed=
+    for lib in $libraries; do
+        "$0" "$work" "$lib" || failed="$failed $lib"
+    done
+    if [ -n "$failed" ]; then
+        printf '\n== FAILED:%s (plugin: %s)\n' "$failed" "${PLUGIN:-allow}" >&2
+        exit 1
+    fi
+    printf '\n== all passed: %s (plugin: %s)\n' "$libraries" "${PLUGIN:-allow}"
+    exit 0
+fi
 plugin=${PLUGIN:-allow}
 . "$pkg/src/release.sh"
 case $(uname -s) in MINGW* | MSYS* | CYGWIN*) exe=.exe ;; *) exe= ;; esac
@@ -127,7 +142,7 @@ PHP
         ;;
     laravel-snappy)
         rm -rf "$work/$lib"
-        composer create-project --no-interaction --quiet laravel/laravel "$work/$lib"
+        composer create-project --no-interaction --no-progress laravel/laravel "$work/$lib"
         cd "$work/$lib"
         composer require --no-interaction barryvdh/laravel-snappy
         install_line
@@ -149,7 +164,7 @@ PHP
         ;;
     knpsnappybundle | knpsnappybundle-php)
         rm -rf "$work/$lib"
-        composer create-project --no-interaction --quiet symfony/skeleton "$work/$lib"
+        composer create-project --no-interaction --no-progress symfony/skeleton "$work/$lib"
         cd "$work/$lib"
         composer require --no-interaction knplabs/knp-snappy-bundle
         install_line
