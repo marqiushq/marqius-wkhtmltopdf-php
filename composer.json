@@ -1,0 +1,28 @@
+{
+    "name": "marqius/wkhtmltopdf",
+    "description": "marqius-wkhtmltopdf, the maintained drop-in replacement for wkhtmltopdf, for Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle and CakePdf (commercial, 30-day trial)",
+    "type": "composer-plugin",
+    "keywords": ["wkhtmltopdf", "wkhtmltoimage", "pdf", "html-to-pdf", "snappy", "laravel-snappy", "phpwkhtmltopdf", "knp-snappy-bundle", "cakepdf"],
+    "homepage": "https://marqius.com/wkhtmltopdf/",
+    "license": "proprietary",
+    "authors": [
+        {"name": "Simple AI LLC", "email": "hello@marqius.com", "homepage": "https://marqius.com"}
+    ],
+    "support": {
+        "email": "hello@marqius.com",
+        "docs": "https://marqius.com/download/developer-manual.pdf",
+        "source": "https://github.com/marqiushq/marqius-wkhtmltopdf-php"
+    },
+    "require": {
+        "php": ">=7.2",
+        "composer-plugin-api": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {"Marqius\\Wkhtmltopdf\\": "src/"}
+    },
+    "bin": ["bin/marqius-wkhtmltopdf"],
+    "extra": {
+        "class": "Marqius\\Wkhtmltopdf\\Plugin",
+        "plugin-optional": true
+    }
+}

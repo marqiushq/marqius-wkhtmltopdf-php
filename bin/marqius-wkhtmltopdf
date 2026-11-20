@@ -1,0 +1,27 @@
+#!/usr/bin/env php
+<?php
+// marqius-wkhtmltopdf under its own name (vendor/bin/marqius-wkhtmltopdf): help, licence, compare,
+// install and wkhtmltopdf's command line. The first run on a machine fetches the program.
+// marqius-wkhtmltopdf is commercial software with a 30-day free trial: https://marqius.com/wkhtmltopdf/
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Binary.php';
+
+try {
+    $program = Marqius\Wkhtmltopdf\Binary::install(function ($line) {
+        fwrite(STDERR, $line . PHP_EOL);
+    });
+} catch (Throwable $e) {
+    fwrite(STDERR, 'marqius/wkhtmltopdf: ' . $e->getMessage() . PHP_EOL);
+    exit(1);
+}
+
+$args = array_slice($_SERVER['argv'], 1);
+if (PHP_OS_FAMILY !== 'Windows' && function_exists('pcntl_exec')) {
+    @pcntl_exec($program, $args); // returns only if the program could not be started
+}
+// otherwise run it with this process's standard streams, and end with its status
+$command = array_merge([$program], $args);
+if (PHP_VERSION_ID < 70400) {
+    $command = implode(' ', array_map('escapeshellarg', $command));
+}
+$process = proc_open($command, [STDIN, STDOUT, STDERR], $pipes);
+exit($process === false ? 1 : proc_close($process));

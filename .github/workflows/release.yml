@@ -1,0 +1,197 @@
+# Keeps marqius/wkhtmltopdf on the latest release of marqius-wkhtmltopdf, and proves it works first:
+#
+#   every hour     when marqius.com's latest release is newer than the package, each build is checked
+#                  against its published SHA-256 and the checksums are written into the package.
+#                  Composer installs it, as the README prints it, and Snappy, laravel-snappy,
+#                  phpwkhtmltopdf, KnpSnappyBundle and CakePdf make PDFs with it on Linux (x86-64 and
+#                  ARM64), macOS (Apple silicon) and Windows. Only then is it committed and tagged for
+#                  Packagist, and the README's lines run again from Packagist itself.
+#   by hand        Actions > Release > Run workflow: the same, now; it also publishes the package's
+#                  own release if it has no tag yet, which is how the first release goes out
+#   on a change    to main, or in a pull request: the package as it stands, on the same four
+#   while private  the hourly check does not run
+name: Release
+
+on:
+  schedule:
+    - cron: "37 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  follow:
+    # while the repository is private, the hourly check does not run (it would spend private minutes)
+    if: github.event_name != 'schedule' || !github.event.repository.private
+    runs-on: ubuntu-24.04
+    outputs:
+      new: ${{ steps.follow.outputs.new }}
+      publish: ${{ steps.follow.outputs.publish }}
+      version: ${{ steps.follow.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: follow
+        name: Follow marqius.com's latest release
+        run: |
+          . src/release.sh
+          new=false publish=false target=$version
+          if [ "$GITHUB_EVENT_NAME" = schedule ] || [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            latest=$(python3 .github/release.py latest)
+            if python3 .github/release.py newer "$latest" "$version"; then
+              new=true publish=true target=$latest
+            elif [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ -z "$(git ls-remote --tags origin "refs/tags/$version")" ]; then
+              publish=true # run by hand, and the package's own release has no tag yet: the first one
+            fi
+          fi
+          echo "package $version, marqius.com ${latest:-not asked}: new=$new publish=$publish"
+          printf 'new=%s\npublish=%s\nversion=%s\n' "$new" "$publish" "$target" >>"$GITHUB_OUTPUT"
+      - name: Check the new release's builds and write their checksums into the package
+        if: steps.follow.outputs.new == 'true'
+        env:
+          VERSION: ${{ steps.follow.outputs.version }}
+        run: |
+          python3 .github/release.py fetch "$VERSION" "$RUNNER_TEMP/builds"
+          python3 .github/write-release.py "$VERSION" "$RUNNER_TEMP/builds"
+      - if: steps.follow.outputs.new == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: |
+            src/release.php
+            src/release.sh
+          retention-days: 7
+
+  test:
+    needs: follow
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
+          - runner: ubuntu-24.04-arm
+            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
+          - runner: macos-15
+            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
+          # on Windows, KnpSnappyBundle is set up with the README's PHP, as the README says
+          - runner: windows-2025
+            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle-php
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: needs.follow.outputs.new == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: src
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: "8.4"
+          extensions: zip, intl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Install with Composer, and make PDFs with each library
+        run: |
+          tmp=$RUNNER_TEMP
+          if command -v cygpath >/dev/null; then tmp=$(cygpath -m "$tmp"); fi
+          tests/artifact.sh "$tmp/zips"
+          export MARQIUS_COMPOSER_REPO="{\"type\":\"artifact\",\"url\":\"$tmp/zips\"}"
+          tests/examples.sh "$tmp/allowed" ${{ matrix.libraries }}
+          PLUGIN=off tests/examples.sh "$tmp/blocked" snappy
+
+  publish:
+    needs: [follow, test]
+    if: needs.follow.outputs.publish == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      PACKAGIST_USERNAME: ${{ vars.PACKAGIST_USERNAME }}
+      PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+      - if: needs.follow.outputs.new == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: src
+      - name: Commit and tag the release that passed
+        env:
+          VERSION: ${{ needs.follow.outputs.version }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          . src/release.sh
+          [ "$version" = "$VERSION" ]
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- src/release.php src/release.sh; then
+            git add src/release.php src/release.sh
+            git commit -q -m "marqius-wkhtmltopdf $VERSION" -m "Installed with Composer and run through Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle and CakePdf on Linux (x86-64, ARM64), macOS (Apple silicon) and Windows: $RUN_URL"
+          fi
+          git tag -a "$VERSION" -m "marqius-wkhtmltopdf $VERSION" -m "Tested: $RUN_URL"
+          git push -q origin HEAD:main "refs/tags/$VERSION"
+      # Packagist's GitHub hook takes the tag on its own; this is for a repository without the hook
+      - name: Tell Packagist
+        if: env.PACKAGIST_TOKEN != ''
+        run: |
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer $PACKAGIST_USERNAME:$PACKAGIST_TOKEN" \
+            -d '{"repository":{"url":"https://github.com/${{ github.repository }}"}}' \
+            https://packagist.org/api/update-package
+
+  live:
+    needs: [follow, publish]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
+          - runner: ubuntu-24.04-arm
+            libraries: snappy phpwkhtmltopdf cakepdf
+          - runner: macos-15
+            libraries: snappy phpwkhtmltopdf cakepdf
+          - runner: windows-2025
+            libraries: snappy phpwkhtmltopdf cakepdf
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.follow.outputs.version }}
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: "8.4"
+          extensions: zip, intl, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - name: Wait for Packagist to list the release
+        env:
+          VERSION: ${{ needs.follow.outputs.version }}
+        run: |
+          for _ in $(seq 60); do
+            curl -fsS https://repo.packagist.org/p2/marqius/wkhtmltopdf.json | grep -q "\"version\":\"$VERSION\"" && exit 0
+            sleep 20
+          done
+          echo "Packagist does not list marqius/wkhtmltopdf $VERSION after 20 minutes" >&2
+          exit 1
+      - name: The README's lines, as printed, from Packagist
+        run: |
+          tmp=$RUNNER_TEMP
+          if command -v cygpath >/dev/null; then tmp=$(cygpath -m "$tmp"); fi
+          tests/examples.sh "$tmp/live" ${{ matrix.libraries }}

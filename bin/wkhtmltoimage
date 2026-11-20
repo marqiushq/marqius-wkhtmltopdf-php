@@ -1,0 +1,22 @@
+#!/bin/sh
+# Runs marqius-wkhtmltopdf as wkhtmltoimage, for libraries given this file's path. It is not put on the
+# PATH. marqius-wkhtmltopdf is commercial software with a 30-day free trial: marqius.com/wkhtmltopdf
+self=$0
+while [ -h "$self" ]; do
+    link=$(readlink "$self")
+    case $link in /*) self=$link ;; *) self=${self%/*}/$link ;; esac
+done
+case $self in */*) here=${self%/*} ;; *) here=. ;; esac
+. "$here/../src/release.sh"
+case $(uname -sm) in
+"Linux x86_64" | "Linux amd64") platform=linux-x86_64 ;;
+"Linux aarch64" | "Linux arm64") platform=linux-arm64 ;;
+Darwin*) platform=macos-arm64 ;;
+*) platform=other ;;
+esac
+# the program for this platform, when it is this package's release; otherwise PHP fetches it first
+build=$here/../build/$platform
+stamp=
+[ -r "$build/release" ] && read -r stamp _ <"$build/release"
+[ "$stamp" = "$version" ] && [ -x "$build/marqius-wkhtmltopdf" ] || php "$here/../src/fetch.php" || exit 1
+exec "$build/marqius-wkhtmltopdf" wkhtmltoimage "$@"
