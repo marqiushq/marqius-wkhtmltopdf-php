@@ -102,6 +102,21 @@ for lib in $libraries; do
         project mikehaertl/phpwkhtmltopdf
         install_line
         php_example phpwkhtmltopdf
+        if [ ! -s invoice.pdf ]; then
+            # the README's lines made no file: print the library's own error, and try the two settings
+            # its README suggests for Windows (exec in place of proc_open; proc_open without cmd.exe)
+            cat >why.php <<'PHP'
+<?php
+require __DIR__ . "/vendor/autoload.php";
+foreach (["as printed" => [], "useExec" => ["useExec" => true], "bypass_shell" => ["procOptions" => ["bypass_shell" => true]]] as $how => $options) {
+    $pdf = new mikehaertl\wkhtmlto\Pdf(["binary" => Marqius\Wkhtmltopdf\Binary::path(), "commandOptions" => $options]);
+    $pdf->addPage("<html><h1>Invoice 42</h1></html>");
+    $ok = $pdf->saveAs("why-$how.pdf");
+    echo "phpwkhtmltopdf $how: ", $ok ? "made why-$how.pdf" : "failed: " . trim($pdf->getError()), "\n    command: ", $pdf->getCommand()->getExecCommand(), "\n";
+}
+PHP
+            php why.php || true
+        fi
         check invoice.pdf %PDF-
         ;;
     cakepdf)

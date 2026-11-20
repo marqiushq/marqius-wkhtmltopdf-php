@@ -83,7 +83,7 @@ jobs:
             libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
           # on Windows, KnpSnappyBundle is set up with the README's PHP, as the README says
           - runner: windows-2025
-            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle-php
+            libraries: snappy image cakepdf laravel-snappy knpsnappybundle-php phpwkhtmltopdf
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
