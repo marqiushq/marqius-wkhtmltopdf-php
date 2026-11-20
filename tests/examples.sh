@@ -129,6 +129,27 @@ foreach (["as printed" => [], "useExec" => ["useExec" => true], "bypass_shell" =
     $ok = $pdf->saveAs("why-$how.pdf");
     echo "phpwkhtmltopdf $how: ", $ok ? "made why-$how.pdf" : "failed: " . trim($pdf->getError()), "\n    command: ", $pdf->getCommand()->getExecCommand(), "\n";
 }
+// the program run directly: its error output as a pipe opened "w" or "a" (phpwkhtmltopdf opens it
+// "a" on Windows), with and without --quiet, without a shell and through cmd.exe as phpwkhtmltopdf does
+$bin = Marqius\Wkhtmltopdf\Binary::path();
+$html = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "why-direct.html";
+file_put_contents($html, "<h1>Invoice 42</h1>");
+foreach (["array", "cmd.exe"] as $form) {
+    foreach (["w", "a"] as $mode) {
+        foreach ([false, true] as $quiet) {
+            $out = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "why-direct-$form-$mode-" . ($quiet ? "q" : "v") . ".pdf";
+            $args = array_merge($quiet ? ["--quiet"] : [], [$html, $out]);
+            $cmd = $form === "array" ? array_merge([$bin], $args) : implode(" ", array_map("escapeshellarg", array_merge([$bin], $args)));
+            $p = proc_open($cmd, [1 => ["pipe", "w"], 2 => ["pipe", $mode]], $pipes);
+            $o = @stream_get_contents($pipes[1]);
+            $e = (string) @stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            $code = proc_close($p);
+            printf("direct, %s, error output pipe \"%s\"%s: exit %d, %s, error output %d bytes: %s\n", $form, $mode, $quiet ? ", --quiet" : "", $code, is_file($out) && filesize($out) > 0 ? "PDF made" : "no PDF", strlen($e), substr(str_replace(["\r", "\n"], " ", trim($e)), 0, 160));
+        }
+    }
+}
 PHP
             php why.php || true
         fi
