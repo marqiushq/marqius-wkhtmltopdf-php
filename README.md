@@ -2,7 +2,7 @@
 
 [![Packagist](https://img.shields.io/packagist/v/marqius/wkhtmltopdf)](https://packagist.org/packages/marqius/wkhtmltopdf) [![PHP](https://img.shields.io/packagist/dependency-v/marqius/wkhtmltopdf/php)](https://packagist.org/packages/marqius/wkhtmltopdf) [![Tested on Linux, macOS and Windows](https://github.com/marqiushq/marqius-wkhtmltopdf-php/actions/workflows/release.yml/badge.svg)](https://github.com/marqiushq/marqius-wkhtmltopdf-php/actions/workflows/release.yml)
 
-**marqius-wkhtmltopdf is the maintained drop-in replacement for wkhtmltopdf, installed with Composer.** One command installs it. laravel-snappy, Snappy, KnpSnappyBundle, CakePdf and phpwkhtmltopdf then turn your HTML into PDFs as before. It prints Arabic, Hebrew, Hindi, Thai, Chinese, Japanese and Korean as well as English, on Linux, Mac and Windows.
+**marqius-wkhtmltopdf is the maintained drop-in replacement for wkhtmltopdf, installed with Composer.** Install it with one command, and laravel-snappy, Snappy, KnpSnappyBundle, CakePdf and phpwkhtmltopdf turn your HTML into PDFs as before. It prints Arabic, Hebrew, Hindi, Thai, Chinese, Japanese and Korean as well as English, on Linux, Mac and Windows.
 
 - **One command to install.** No apt packages, no libssl 1.1, no X server, no Qt.
 - **Nothing to set up in Laravel.** Install it, and laravel-snappy uses it.
@@ -80,7 +80,7 @@ Install the package. That's all: laravel-snappy finds marqius-wkhtmltopdf by its
 Barryvdh\Snappy\Facades\SnappyPdf::loadHTML('<h1>Invoice 42</h1>')->save('invoice.pdf');
 ```
 
-Laravel discovers the package, and the package points laravel-snappy at marqius-wkhtmltopdf. If your settings name another wkhtmltopdf that is installed, that one is used: delete the setting to switch.
+Laravel discovers the package, and the package points laravel-snappy at marqius-wkhtmltopdf. If your settings (`config/snappy.php`, or `WKHTML_PDF_BINARY` in `.env`) name another wkhtmltopdf that is installed, that one is used: delete the setting to switch.
 
 To name the program yourself, put it in `config/snappy.php` under `pdf`, and `Binary::imagePath()` under `image`. `php artisan vendor:publish --provider="Barryvdh\Snappy\ServiceProvider"` writes the file.
 
@@ -242,7 +242,7 @@ Your wkhtmltopdf was built for an older system. It needs OpenSSL 1.1, which Debi
 
 ## Is it faster than wkhtmltopdf?
 
-Yes. The public parity suite converts 86 documents with both programs on the same machine. marqius-wkhtmltopdf is 35 times faster, or 5 times faster with wkhtmltopdf's 200 ms wait for scripts turned off for both. On Linux, a one-page invoice takes 5 to 7 milliseconds.
+Yes. The public parity suite converts 86 documents with both programs on the same machine. marqius-wkhtmltopdf is 35 times faster, or 5 times faster with wkhtmltopdf's 200 ms wait for scripts turned off for both. On Linux, a one-page invoice takes 5 to 7 milliseconds. [See the results](https://github.com/marqiushq/wkhtmltopdf-parity).
 
 ## Will my PDFs look the same as with wkhtmltopdf?
 
