@@ -1,6 +1,6 @@
 {
     "name": "marqius/wkhtmltopdf",
-    "description": "marqius-wkhtmltopdf, the maintained drop-in replacement for wkhtmltopdf, for Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle and CakePdf (commercial, 30-day trial)",
+    "description": "marqius-wkhtmltopdf, the maintained drop-in replacement for wkhtmltopdf, for Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle and CakePdf (commercial, 30-day trial, free Community licence available)",
     "type": "composer-plugin",
     "keywords": ["wkhtmltopdf", "wkhtmltoimage", "pdf", "html-to-pdf", "snappy", "laravel-snappy", "phpwkhtmltopdf", "knp-snappy-bundle", "cakepdf"],
     "homepage": "https://marqius.com/wkhtmltopdf/",

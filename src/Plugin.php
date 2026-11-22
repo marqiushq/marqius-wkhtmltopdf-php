@@ -72,7 +72,7 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
                 }
             );
             if ($fetched) {
-                $io->write('marqius-wkhtmltopdf is commercial software with a 30-day free trial: https://marqius.com/licence/marqius-wkhtmltopdf');
+                $io->write('marqius-wkhtmltopdf is commercial software with a 30-day free trial; a free Community licence is available for personal, teaching and open-source use: https://marqius.com/licence/marqius-wkhtmltopdf');
             }
             if ($io->isVerbose()) {
                 $io->write('marqius-wkhtmltopdf: ' . $bin);
