@@ -3,8 +3,8 @@
 **The program.** marqius-wkhtmltopdf, which this package fetches from marqius.com, is commercial
 software from Simple AI LLC. Its use is governed by the marqius-wkhtmltopdf Licence Agreement:
 https://marqius.com/wkhtmltopdf/licence-agreement/. It has a 30-day free trial counted from its first
-run; after the trial, without a licence, each page it makes carries one line saying the copy is
-unlicensed. Plans and licences: https://marqius.com/licence/marqius-wkhtmltopdf
+run; after the trial, without a licence, each page it makes carries one line, "Prepared by Marqius,
+Purchase Licence". Personal, teaching and open-source use is free with a Community licence. Plans and licences: https://marqius.com/licence/marqius-wkhtmltopdf
 
 **This package's own files** (the PHP classes and scripts that fetch the program and give its path
 to your library) are released under the MIT licence:

@@ -1,6 +1,8 @@
-# marqius-wkhtmltopdf for PHP
+# marqius-wkhtmltopdf: wkhtmltopdf for PHP, Snappy, Laravel, Symfony and CakePHP
 
-**marqius-wkhtmltopdf** is the maintained drop-in replacement for wkhtmltopdf. This Composer package brings it to your project for Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle and CakePdf: keep your library, your HTML templates and your PDF calls, and point the library at it with one line. It runs on Linux (x86-64 and ARM64), Apple silicon Macs and Windows (x86-64), and needs no X server, Qt or system libraries.
+**marqius-wkhtmltopdf is the maintained drop-in replacement for wkhtmltopdf, as a Composer package.** `composer require` it, give your library its path in one line, and Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle or CakePdf keep making PDFs from your HTML. It replaces the abandoned `h4cc/wkhtmltopdf-amd64` package, and runs on Linux (x86-64 and ARM64, including Debian 13 and Ubuntu 24.04), Apple silicon Macs and Windows (x86-64).
+
+## How do I install wkhtmltopdf with Composer?
 
 <!-- install -->
 ```bash
@@ -9,13 +11,11 @@ composer require marqius/wkhtmltopdf
 
 Composer asks whether to trust `marqius/wkhtmltopdf`. Answer `y`, and it fetches the program for your machine while it installs the package, checked against the SHA-256 published with the release. In CI or a Docker build, allow it first with `composer config allow-plugins.marqius/wkhtmltopdf true`. Without that, the program is fetched the first time your library runs it.
 
-On a server or in a container without fonts, such as a slim or Alpine image, the program says so and prints the one line that installs them for that system.
+It installs nothing under the name `wkhtmltopdf` on your system: your library gets the program's path from `Marqius\Wkhtmltopdf\Binary::path()`, as below.
 
-## Point your library at it
+## How do I use wkhtmltopdf with Snappy?
 
-`Marqius\Wkhtmltopdf\Binary::path()` gives the installed program's path: give it to your library where it asks for the wkhtmltopdf binary, and `Binary::imagePath()` where it asks for wkhtmltoimage. Each is a path inside `vendor/`; nothing is installed under the name `wkhtmltopdf` on your system.
-
-### Snappy
+Give Snappy the path:
 
 <!-- example: snappy -->
 ```php
@@ -25,7 +25,7 @@ $snappy->generateFromHtml('<h1>Invoice 42</h1>', 'invoice.pdf');
 
 Pictures work the same way: `new Knp\Snappy\Image(Marqius\Wkhtmltopdf\Binary::imagePath())`.
 
-### laravel-snappy
+## How do I use it with laravel-snappy in Laravel?
 
 In `config/snappy.php` (`php artisan vendor:publish --provider="Barryvdh\Snappy\ServiceProvider"` writes it), name the binary under `pdf`, and `Binary::imagePath()` under `image`:
 
@@ -43,7 +43,7 @@ Barryvdh\Snappy\Facades\SnappyPdf::loadHTML('<h1>Invoice 42</h1>')->save('invoic
 
 If your app caches its configuration, run `php artisan config:clear` after the change.
 
-### phpwkhtmltopdf
+## How do I use it with phpwkhtmltopdf?
 
 <!-- example: phpwkhtmltopdf -->
 ```php
@@ -51,7 +51,7 @@ $pdf = new mikehaertl\wkhtmlto\Pdf(['binary' => Marqius\Wkhtmltopdf\Binary::path
 $pdf->addPage('<html><h1>Invoice 42</h1></html>')->saveAs('invoice.pdf');
 ```
 
-### KnpSnappyBundle
+## How do I use it with KnpSnappyBundle in Symfony?
 
 In `config/packages/knp_snappy.yaml`:
 
@@ -81,7 +81,7 @@ return static function (Symfony\Component\DependencyInjection\Loader\Configurato
 };
 ```
 
-### CakePdf
+## How do I use it with CakePdf in CakePHP?
 
 In `config/bootstrap.php`, or before you make a PDF:
 
@@ -91,26 +91,60 @@ Cake\Core\Configure::write('CakePdf.engine', ['className' => 'CakePdf.WkHtmlToPd
 (new CakePdf\Pdf\CakePdf())->write('invoice.pdf', true, '<h1>Invoice 42</h1>');
 ```
 
-## The program itself
+## What replaces h4cc/wkhtmltopdf-amd64?
 
-`vendor/bin/marqius-wkhtmltopdf` runs it under its own name: `vendor/bin/marqius-wkhtmltopdf help snappy` shows each library's setting, `vendor/bin/marqius-wkhtmltopdf compare old.pdf new.pdf` lists every difference between a PDF made by wkhtmltopdf and one made by marqius-wkhtmltopdf, and `vendor/bin/marqius-wkhtmltopdf licence` shows the trial days left.
+marqius-wkhtmltopdf does. Run `composer remove h4cc/wkhtmltopdf-amd64`, then `composer require marqius/wkhtmltopdf`, and replace the old path in your settings with `Marqius\Wkhtmltopdf\Binary::path()`.
 
-To give it the names `wkhtmltopdf` and `wkhtmltoimage` for everything on a server, as the [one-line installer](https://marqius.com/wkhtmltopdf/download/) does, run `vendor/bin/marqius-wkhtmltopdf install` with the rights to write to `/usr/local/bin`.
+## Why does Snappy say "The exit status code '127' says something went wrong"?
 
-## Always the latest release
+Exit status 127 means the program Snappy runs was not found. Install this package and give Snappy `Marqius\Wkhtmltopdf\Binary::path()`, as shown above.
 
-Each release of this package carries one release of marqius-wkhtmltopdf, with the same version number. [A workflow](https://github.com/marqiushq/marqius-wkhtmltopdf-php/blob/main/.github/workflows/release.yml) follows marqius.com every hour: a new release is checked against its published checksums, installed with Composer and run through Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle and CakePdf on Linux (x86-64 and ARM64), macOS (Apple silicon) and Windows, and only then published here. To move to it:
+## Why does wkhtmltopdf fail with "libssl.so.1.1: cannot open shared object file"?
+
+Your wkhtmltopdf was built for an older system. It needs OpenSSL 1.1, which Debian 13 and Ubuntu 24.04 no longer include. marqius-wkhtmltopdf needs no system libraries, so it runs there as it is.
+
+## Which systems does marqius-wkhtmltopdf run on?
+
+It runs on:
+
+- Linux on x86-64 and ARM64;
+- Macs with Apple silicon;
+- Windows on x86-64.
+
+The package fetches the right program for each. It needs no X server, Qt or system libraries. In a slim or Alpine image without fonts, the program says so and prints the one line that installs them.
+
+## Is marqius-wkhtmltopdf free?
+
+You can try it free for 30 days. Personal, teaching and open-source use is free with a [Community licence](https://marqius.com/wkhtmltopdf-buy/#community): sign in with Google and your free key is waiting in your account.
+
+Anything done by or for a business, including internal tools and client work, needs Starter or above once the trial ends. Starter is $290 USD a year for organisations of up to 10 people, and Business $990 USD a year, plus applicable taxes.
+
+Your PDFs never stop. Without a licence after the trial, each page carries one line, "Prepared by Marqius, Purchase Licence". [Plans and licences](https://marqius.com/licence/marqius-wkhtmltopdf) · [Licence terms](https://marqius.com/wkhtmltopdf/licence-agreement/)
+
+## How do I add my licence key?
+
+Set the `MARQIUS_LICENCE` environment variable to your licence; that is the way for containers and CI. Or save it as `licence.txt` and run `vendor/bin/marqius-wkhtmltopdf licence add licence.txt`. `vendor/bin/marqius-wkhtmltopdf licence` shows the trial's days left, or the licence in force.
+
+## Do these libraries pass their own tests?
+
+Yes. Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle and CakePdf pass their own test suites with marqius-wkhtmltopdf. The results are public: [wkhtmltopdf library tests](https://github.com/marqiushq/wkhtmltopdf-library-tests).
+
+Before each version of this package is published, [its workflow](https://github.com/marqiushq/marqius-wkhtmltopdf-php/blob/main/.github/workflows/release.yml) installs it with Composer and runs the examples on this page on Linux (x86-64 and ARM64), macOS and Windows.
+
+## How do I update it?
+
+Each version of this package carries the marqius-wkhtmltopdf release with the same number. To move to the newest:
 
 ```bash
 composer update marqius/wkhtmltopdf
 ```
 
-## Licence
+## What else does the program do?
 
-marqius-wkhtmltopdf is commercial software from Simple AI LLC, with a 30-day free trial counted from its first run. After the trial, without a licence, each page carries one line saying the copy is unlicensed. [Plans and licences](https://marqius.com/licence/marqius-wkhtmltopdf) · [Licence terms](https://marqius.com/wkhtmltopdf/licence-agreement/)
+`vendor/bin/marqius-wkhtmltopdf` runs it under its own name:
 
-## Before you switch
+- `vendor/bin/marqius-wkhtmltopdf help snappy` shows each library's setting;
+- `vendor/bin/marqius-wkhtmltopdf compare old.pdf new.pdf` lists every difference between a PDF made by wkhtmltopdf and one made by marqius-wkhtmltopdf;
+- `vendor/bin/marqius-wkhtmltopdf install` gives it the names `wkhtmltopdf` and `wkhtmltoimage` for everything on a server, with the rights to write to `/usr/local/bin`.
 
-- [wkhtmltopdf parity suite](https://github.com/marqiushq/wkhtmltopdf-parity): the same HTML documents through wkhtmltopdf and marqius-wkhtmltopdf on every release, misses included.
-- [The developer manual](https://marqius.com/download/developer-manual.pdf), one chapter per library, and [runnable examples](https://github.com/marqiushq/marqius-wkhtmltopdf-examples).
-- Moving from `h4cc/wkhtmltopdf-amd64`? Run `composer remove h4cc/wkhtmltopdf-amd64`, then replace its path in your settings with `Marqius\Wkhtmltopdf\Binary::path()`.
+This package's own PHP files are under the MIT licence: [LICENSE.md](LICENSE.md).
