@@ -1,7 +1,8 @@
 # Keeps marqius/wkhtmltopdf on the latest release of marqius-wkhtmltopdf, and proves it works first:
 #
-#   every hour     when marqius.com's latest release is newer than the package, each build is checked
-#                  against its published SHA-256 and the checksums are written into the package.
+#   every hour     when marqius-wkhtmltopdf's latest GitHub release is newer than the package, each
+#                  build is checked against its published SHA-256 and GitHub build provenance, and the
+#                  checksums are written into the package.
 #                  Composer installs it, as the README prints it, and Snappy, laravel-snappy,
 #                  phpwkhtmltopdf, KnpSnappyBundle and CakePdf make PDFs with it on Linux (x86-64 and
 #                  ARM64), macOS (Apple silicon) and Windows. Only then is it committed and tagged for
@@ -10,6 +11,7 @@
 #                  own release if it has no tag yet, which is how the first release goes out
 #   on a change    to main, or in a pull request: the package as it stands, on the same four
 #   while private  the hourly check does not run
+#   publishing     only from a public repository whose variable PUBLISHING is "on"
 name: Release
 
 on:
@@ -39,7 +41,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: follow
-        name: Follow marqius.com's latest release
+        name: Follow marqius-wkhtmltopdf's latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           . src/release.sh
           new=false publish=false target=$version
@@ -51,11 +55,12 @@ jobs:
               publish=true # run by hand, and the package's own release has no tag yet: the first one
             fi
           fi
-          echo "package $version, marqius.com ${latest:-not asked}: new=$new publish=$publish"
+          echo "package $version, latest release ${latest:-not asked}: new=$new publish=$publish"
           printf 'new=%s\npublish=%s\nversion=%s\n' "$new" "$publish" "$target" >>"$GITHUB_OUTPUT"
       - name: Check the new release's builds and write their checksums into the package
         if: steps.follow.outputs.new == 'true'
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.follow.outputs.version }}
         run: |
           python3 .github/release.py fetch "$VERSION" "$RUNNER_TEMP/builds"
@@ -112,7 +117,9 @@ jobs:
 
   publish:
     needs: [follow, test]
-    if: needs.follow.outputs.publish == 'true' && github.ref == 'refs/heads/main'
+    if: >-
+      needs.follow.outputs.publish == 'true' && github.ref == 'refs/heads/main' &&
+      vars.PUBLISHING == 'on' && !github.event.repository.private
     runs-on: ubuntu-24.04
     permissions:
       contents: write
