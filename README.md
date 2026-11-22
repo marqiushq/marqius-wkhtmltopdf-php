@@ -51,6 +51,14 @@ $pdf = new mikehaertl\wkhtmlto\Pdf(['binary' => Marqius\Wkhtmltopdf\Binary::path
 $pdf->addPage('<html><h1>Invoice 42</h1></html>')->saveAs('invoice.pdf');
 ```
 
+**On Windows, until marqius-wkhtmltopdf 0.12.14,** give phpwkhtmltopdf its `useExec` option, as below. With phpwkhtmltopdf's default settings on Windows, the program stops before it writes the PDF.
+
+<!-- example: phpwkhtmltopdf windows -->
+```php
+$pdf = new mikehaertl\wkhtmlto\Pdf(['binary' => Marqius\Wkhtmltopdf\Binary::path(), 'commandOptions' => ['useExec' => true]]);
+$pdf->addPage('<html><h1>Invoice 42</h1></html>')->saveAs('invoice.pdf');
+```
+
 ## How do I use it with KnpSnappyBundle in Symfony?
 
 In `config/packages/knp_snappy.yaml`:

@@ -86,9 +86,11 @@ jobs:
             libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
           - runner: macos-15
             libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
-          # on Windows, KnpSnappyBundle is set up with the README's PHP, as the README says
+          # on Windows, KnpSnappyBundle is set up with the README's PHP, as the README says, and
+          # phpwkhtmltopdf with its useExec option, as the README says until 0.12.14 (with its default
+          # settings there the program stops before it writes the PDF; the engine fix is for 0.12.14)
           - runner: windows-2025
-            libraries: snappy image cakepdf laravel-snappy knpsnappybundle-php phpwkhtmltopdf
+            libraries: snappy image cakepdf laravel-snappy knpsnappybundle-php phpwkhtmltopdf-windows
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
@@ -172,7 +174,7 @@ jobs:
           - runner: macos-15
             libraries: snappy phpwkhtmltopdf cakepdf
           - runner: windows-2025
-            libraries: snappy phpwkhtmltopdf cakepdf
+            libraries: snappy phpwkhtmltopdf-windows cakepdf
     runs-on: ${{ matrix.runner }}
     defaults:
       run:

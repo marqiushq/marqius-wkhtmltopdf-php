@@ -155,6 +155,13 @@ PHP
         fi
         check invoice.pdf %PDF-
         ;;
+    phpwkhtmltopdf-windows)
+        # the README's Windows lines for phpwkhtmltopdf (useExec), until 0.12.14 fixes its default settings there
+        project mikehaertl/phpwkhtmltopdf
+        install_line
+        php_example "phpwkhtmltopdf windows"
+        check invoice.pdf %PDF-
+        ;;
     cakepdf)
         project "friendsofcake/cakepdf:^5.0"
         install_line
