@@ -1,8 +1,8 @@
 {
     "name": "marqius/wkhtmltopdf",
-    "description": "marqius-wkhtmltopdf, the maintained drop-in replacement for wkhtmltopdf, for Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle and CakePdf (commercial, 30-day trial, free Community licence available)",
+    "description": "The maintained drop-in replacement for wkhtmltopdf, for Snappy, laravel-snappy, phpwkhtmltopdf, KnpSnappyBundle and CakePdf. Prints Arabic, Hebrew, Hindi, Thai, Chinese, Japanese and Korean. Commercial, 30-day trial, free Community licence available.",
     "type": "composer-plugin",
-    "keywords": ["wkhtmltopdf", "wkhtmltoimage", "pdf", "html-to-pdf", "snappy", "laravel-snappy", "phpwkhtmltopdf", "knp-snappy-bundle", "cakepdf"],
+    "keywords": ["wkhtmltopdf", "wkhtmltoimage", "pdf", "html-to-pdf", "snappy", "laravel-snappy", "laravel", "symfony", "cakephp", "phpwkhtmltopdf", "knp-snappy-bundle", "cakepdf", "invoice", "rtl", "arabic", "hebrew", "hindi", "thai", "chinese", "japanese", "korean", "cjk", "unicode"],
     "homepage": "https://marqius.com/wkhtmltopdf/",
     "license": "proprietary",
     "authors": [
@@ -23,6 +23,9 @@
     "bin": ["bin/marqius-wkhtmltopdf"],
     "extra": {
         "class": "Marqius\\Wkhtmltopdf\\Plugin",
-        "plugin-optional": true
+        "plugin-optional": true,
+        "laravel": {
+            "providers": ["Marqius\\Wkhtmltopdf\\LaravelServiceProvider"]
+        }
     }
 }

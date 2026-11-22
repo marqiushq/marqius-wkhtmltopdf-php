@@ -81,16 +81,16 @@ jobs:
       matrix:
         include:
           - runner: ubuntu-24.04
-            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
+            libraries: quickstart snappy image phpwkhtmltopdf cakepdf laravel-snappy laravel-snappy-config knpsnappybundle knpsnappybundle-php languages
           - runner: ubuntu-24.04-arm
-            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
+            libraries: quickstart snappy image phpwkhtmltopdf cakepdf laravel-snappy laravel-snappy-config knpsnappybundle knpsnappybundle-php languages
           - runner: macos-15
-            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
+            libraries: quickstart snappy image phpwkhtmltopdf cakepdf laravel-snappy laravel-snappy-config knpsnappybundle knpsnappybundle-php languages
           # on Windows, KnpSnappyBundle is set up with the README's PHP, as the README says, and
           # phpwkhtmltopdf with its useExec option, as the README says until 0.12.14 (with its default
           # settings there the program stops before it writes the PDF; the engine fix is for 0.12.14)
           - runner: windows-2025
-            libraries: snappy image cakepdf laravel-snappy knpsnappybundle-php phpwkhtmltopdf-windows
+            libraries: quickstart snappy image cakepdf laravel-snappy laravel-snappy-config knpsnappybundle-php phpwkhtmltopdf-windows languages
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
@@ -168,13 +168,13 @@ jobs:
       matrix:
         include:
           - runner: ubuntu-24.04
-            libraries: snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php
+            libraries: quickstart snappy image phpwkhtmltopdf cakepdf laravel-snappy laravel-snappy-config knpsnappybundle knpsnappybundle-php languages
           - runner: ubuntu-24.04-arm
-            libraries: snappy phpwkhtmltopdf cakepdf
+            libraries: quickstart snappy phpwkhtmltopdf cakepdf laravel-snappy languages
           - runner: macos-15
-            libraries: snappy phpwkhtmltopdf cakepdf
+            libraries: quickstart snappy phpwkhtmltopdf cakepdf laravel-snappy languages
           - runner: windows-2025
-            libraries: snappy phpwkhtmltopdf-windows cakepdf
+            libraries: quickstart snappy phpwkhtmltopdf-windows cakepdf laravel-snappy languages
     runs-on: ${{ matrix.runner }}
     defaults:
       run:

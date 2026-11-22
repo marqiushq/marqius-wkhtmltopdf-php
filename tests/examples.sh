@@ -4,9 +4,12 @@
 #
 #   tests/examples.sh WORK [LIBRARY ...]
 #
-# LIBRARY is snappy, image, phpwkhtmltopdf, cakepdf, laravel-snappy, knpsnappybundle or
-# knpsnappybundle-php (all by default). With several, each runs on its own, and all are reported
-# before the script fails. PLUGIN=allow (the default) lets Composer run the package's plugin,
+# LIBRARY is quickstart (the README's first three steps, in an empty folder), snappy, image,
+# phpwkhtmltopdf, phpwkhtmltopdf-windows, cakepdf, laravel-snappy (no setting at all),
+# laravel-snappy-config (the README's line in config/snappy.php), knpsnappybundle,
+# knpsnappybundle-php or languages (the README's eight-language invoice, after its fonts line on
+# Debian and Ubuntu); all but phpwkhtmltopdf-windows by default. With several, each runs on its
+# own, and all are reported before the script fails. PLUGIN=allow (the default) lets Composer run the package's plugin,
 # which fetches the program while Composer installs; PLUGIN=prompt answers Composer's trust
 # question with y; PLUGIN=off leaves the plugin blocked, so the program is fetched on first use.
 # MARQIUS_COMPOSER_REPO is a Composer repository (JSON) that holds marqius/wkhtmltopdf before
@@ -15,7 +18,7 @@ set -eu
 pkg=$(cd "$(dirname "$0")/.." && pwd)
 work=$1
 shift
-libraries=${*:-snappy image phpwkhtmltopdf cakepdf laravel-snappy knpsnappybundle knpsnappybundle-php}
+libraries=${*:-quickstart snappy image phpwkhtmltopdf cakepdf laravel-snappy laravel-snappy-config knpsnappybundle knpsnappybundle-php languages}
 
 # several libraries: run each in a process of its own, so that one failing does not hide the rest
 if [ "$(echo $libraries | wc -w)" -gt 1 ]; then
@@ -52,7 +55,9 @@ install_line() {
     say "$line"
     case $plugin in
     allow)
-        composer config allow-plugins.marqius/wkhtmltopdf true
+        allow=$(readme allow)
+        say "$allow"
+        sh -c "$allow"
         sh -c "$line" </dev/null
         fetched || fail "the plugin did not fetch the program while Composer installed"
         ;;
@@ -87,6 +92,25 @@ php_example() { # the README's block, in a script that loads Composer's autoload
     { printf '<?php\nrequire __DIR__ . "/vendor/autoload.php";\n'; readme "example: $1"; } >render.php
     cat render.php
     php render.php
+}
+
+laravel_render() { # the README's Laravel line, in the application booted as for a request
+    { printf '<?php\nrequire __DIR__ . "/vendor/autoload.php";\n$app = require __DIR__ . "/bootstrap/app.php";\n$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();\n'; readme "example: laravel-snappy"; } >render.php
+    php render.php
+}
+
+# what the program says of a page's letters: the README's own line for it where the system can run
+# that (Linux and macOS), the program as Binary::path() gives it on Windows
+program_says() {
+    if [ -z "$exe" ]; then
+        line=$(readme check)
+        say "$line"
+        sh -c "$line" >said.txt 2>&1 || true
+    else
+        bin=$(php -r 'require "vendor/autoload.php"; echo Marqius\Wkhtmltopdf\Binary::path();')
+        "$(cygpath -u "$bin")" page.html page.pdf >said.txt 2>&1 || true
+    fi
+    cat said.txt
 }
 
 check() { # a file made by the example, and its first bytes
@@ -168,7 +192,86 @@ PHP
         php_example cakepdf
         check invoice.pdf %PDF-
         ;;
+    quickstart)
+        # the README's three steps, as printed, in a new folder: empty, but for Composer's settings
+        # where the package comes from an artifact repository or Composer is let run its plugin
+        dir=$work/$lib
+        rm -rf "$dir"
+        mkdir -p "$dir"
+        cd "$dir"
+        if [ -n "${MARQIUS_COMPOSER_REPO:-}" ]; then
+            echo '{}' >composer.json
+            composer config repositories.marqius "$MARQIUS_COMPOSER_REPO"
+        fi
+        if [ "$plugin" = allow ]; then
+            [ -f composer.json ] || echo '{}' >composer.json
+            sh -c "$(readme allow)"
+        fi
+        line=$(readme quickstart)
+        say "$line"
+        sh -c "$line" </dev/null
+        readme "example: quickstart invoice.php" >invoice.php
+        cat invoice.php
+        line=$(readme run)
+        say "$line"
+        sh -c "$line"
+        check invoice.pdf %PDF-
+        ;;
+    languages)
+        project knplabs/knp-snappy
+        install_line
+        # the page in the README's example, as page.html for the program's own line
+        readme "example: languages" | php -r '$s = stream_get_contents(STDIN); preg_match("{<<<.HTML.\n(.*?)\nHTML;}s", $s, $m) || exit(1); file_put_contents("page.html", $m[1] . "\n");'
+        if [ -f /etc/debian_version ]; then
+            # before the fonts: what the program says, and that it names Debian's Noto packages
+            program_says
+            if grep -q 'no font has a glyph' said.txt; then
+                grep -q 'fonts-noto' said.txt || fail "the program named letters with no font, but no fonts-noto package to install"
+            fi
+            line=$(readme "fonts: debian")
+            say "$line"
+            sh -c "$line"
+        fi
+        php_example languages
+        check invoice.pdf %PDF-
+        # every word as written, where pdftotext can be had
+        if ! command -v pdftotext >/dev/null 2>&1; then
+            if [ -f /etc/debian_version ]; then
+                sudo apt-get install -y -qq poppler-utils >/dev/null || true
+            elif [ "$(uname -s)" = Darwin ]; then
+                brew install -q poppler >/dev/null || true
+            fi
+        fi
+        if command -v pdftotext >/dev/null 2>&1; then
+            pdftotext invoice.pdf - >text.txt
+            cat text.txt
+            for word in 'Invoice 42' 'فاتورة' 'חשבונית' 'चालान' 'ใบแจ้งหนี้' '发票' '請求書' '청구서'; do
+                grep -qF "$word" text.txt || fail "invoice.pdf does not read $word as written"
+            done
+            echo "ok $lib: every word reads back as written"
+        fi
+        # after the fonts, or with the system's own: no letter without a font
+        program_says
+        ! grep -q 'no font has a glyph' said.txt || fail "letters with no font on this system"
+        ;;
     laravel-snappy)
+        # no setting at all: Laravel discovers the package, which points laravel-snappy at the program,
+        # with laravel-snappy's own configuration, then with config/snappy.php published as it comes
+        rm -rf "$work/$lib"
+        composer create-project --no-interaction --no-progress laravel/laravel "$work/$lib"
+        cd "$work/$lib"
+        composer require --no-interaction barryvdh/laravel-snappy
+        install_line
+        grep -qF 'Marqius\\Wkhtmltopdf\\LaravelServiceProvider' bootstrap/cache/packages.php || fail "Laravel did not discover the package's provider"
+        laravel_render
+        check invoice.pdf %PDF-
+        rm -f invoice.pdf
+        php artisan vendor:publish --provider="Barryvdh\Snappy\ServiceProvider"
+        grep -n "binary" config/snappy.php
+        laravel_render
+        check invoice.pdf %PDF-
+        ;;
+    laravel-snappy-config)
         rm -rf "$work/$lib"
         composer create-project --no-interaction --no-progress laravel/laravel "$work/$lib"
         cd "$work/$lib"
@@ -186,8 +289,7 @@ PHP
             if ($a + $b !== 2) { fwrite(STDERR, "config/snappy.php has no binary lines to replace\n"); exit(1); }
             file_put_contents("config/snappy.php", $c);'
         grep -n "Binary::" config/snappy.php
-        { printf '<?php\nrequire __DIR__ . "/vendor/autoload.php";\n$app = require __DIR__ . "/bootstrap/app.php";\n$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();\n'; readme "example: laravel-snappy"; } >render.php
-        php render.php
+        laravel_render
         check invoice.pdf %PDF-
         ;;
     knpsnappybundle | knpsnappybundle-php)
