@@ -243,7 +243,9 @@ PHP
             fi
         fi
         if command -v pdftotext >/dev/null 2>&1; then
-            pdftotext invoice.pdf - >text.txt
+            # UTF-8 said outright: the pdftotext that comes with Git on Windows writes Latin-1 otherwise
+            pdftotext -v 2>&1 | head -n 1
+            pdftotext -enc UTF-8 invoice.pdf - >text.txt
             cat text.txt
             for word in 'Invoice 42' 'فاتورة' 'חשבונית' 'चालान' 'ใบแจ้งหนี้' '发票' '請求書' '청구서'; do
                 grep -qF "$word" text.txt || fail "invoice.pdf does not read $word as written"
