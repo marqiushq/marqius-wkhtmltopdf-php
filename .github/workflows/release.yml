@@ -10,6 +10,8 @@
 #   by hand        Actions > Release > Run workflow: the same, now; it also publishes the package's
 #                  own release if it has no tag yet, which is how the first release goes out
 #   on a change    to main, or in a pull request: the package as it stands, on the same four
+#   live, by hand  Actions > Release > Run workflow, "live" ticked: this README's lines, as printed, with
+#                  the newest version on Packagist, on the same four; nothing is built or published
 #   while private  the hourly check does not run
 #   publishing     only from a public repository whose variable PUBLISHING is "on"
 name: Release
@@ -18,6 +20,11 @@ on:
   schedule:
     - cron: "37 * * * *"
   workflow_dispatch:
+    inputs:
+      live:
+        description: "Only run this README's lines with the newest version on Packagist (nothing is built or published)"
+        type: boolean
+        default: false
   push:
     branches: [main]
   pull_request:
@@ -38,16 +45,20 @@ jobs:
       new: ${{ steps.follow.outputs.new }}
       publish: ${{ steps.follow.outputs.publish }}
       version: ${{ steps.follow.outputs.version }}
+      live: ${{ steps.follow.outputs.live }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: follow
         name: Follow marqius-wkhtmltopdf's latest release
         env:
           GH_TOKEN: ${{ github.token }}
+          LIVE_ONLY: ${{ inputs.live }}
         run: |
           . src/release.sh
-          new=false publish=false target=$version
-          if [ "$GITHUB_EVENT_NAME" = schedule ] || [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+          new=false publish=false live=false target=$version
+          if [ "$LIVE_ONLY" = true ]; then
+            live=true # run by hand, live only: the README's lines with what Packagist has now
+          elif [ "$GITHUB_EVENT_NAME" = schedule ] || [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
             latest=$(python3 .github/release.py latest)
             if python3 .github/release.py newer "$latest" "$version"; then
               new=true publish=true target=$latest
@@ -55,8 +66,8 @@ jobs:
               publish=true # run by hand, and the package's own release has no tag yet: the first one
             fi
           fi
-          echo "package $version, latest release ${latest:-not asked}: new=$new publish=$publish"
-          printf 'new=%s\npublish=%s\nversion=%s\n' "$new" "$publish" "$target" >>"$GITHUB_OUTPUT"
+          echo "package $version, latest release ${latest:-not asked}: new=$new publish=$publish live=$live"
+          printf 'new=%s\npublish=%s\nversion=%s\nlive=%s\n' "$new" "$publish" "$target" "$live" >>"$GITHUB_OUTPUT"
       - name: Check the new release's builds and write their checksums into the package
         if: steps.follow.outputs.new == 'true'
         env:
@@ -76,6 +87,7 @@ jobs:
 
   test:
     needs: follow
+    if: needs.follow.outputs.live != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -163,6 +175,10 @@ jobs:
 
   live:
     needs: [follow, publish]
+    # after a publish, or by hand with "live" ticked
+    if: >-
+      always() && needs.follow.result == 'success' &&
+      (needs.publish.result == 'success' || needs.follow.outputs.live == 'true')
     strategy:
       fail-fast: false
       matrix:
@@ -182,7 +198,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.follow.outputs.version }}
+          # the release just tagged; by hand, the README as it stands on the branch run
+          ref: ${{ needs.follow.outputs.live == 'true' && github.sha || needs.follow.outputs.version }}
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: "8.4"
@@ -190,6 +207,7 @@ jobs:
           tools: composer:v2
           coverage: none
       - name: Wait for Packagist to list the release
+        if: needs.follow.outputs.live != 'true'
         env:
           VERSION: ${{ needs.follow.outputs.version }}
         run: |
