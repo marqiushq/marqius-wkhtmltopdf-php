@@ -6,7 +6,8 @@
 #                  Composer installs it, as the README prints it, and Snappy, laravel-snappy,
 #                  phpwkhtmltopdf, KnpSnappyBundle and CakePdf make PDFs with it on Linux (x86-64 and
 #                  ARM64), macOS (Apple silicon) and Windows. Only then is it committed and tagged for
-#                  Packagist, and the README's lines run again from Packagist itself.
+#                  Packagist, and the README's lines run again from Packagist itself. An hour with no
+#                  new release ends after that first check: there is nothing new to test.
 #   by hand        Actions > Release > Run workflow: the same, now; it also publishes the package's
 #                  own release if it has no tag yet, which is how the first release goes out
 #   on a change    to main, or in a pull request: the package as it stands, on the same four
@@ -87,7 +88,10 @@ jobs:
 
   test:
     needs: follow
-    if: needs.follow.outputs.live != 'true'
+    # every hour, only when there is a release to publish: the other hours have nothing new to test
+    if: >-
+      needs.follow.outputs.live != 'true' &&
+      (github.event_name != 'schedule' || needs.follow.outputs.publish == 'true')
     strategy:
       fail-fast: false
       matrix:
